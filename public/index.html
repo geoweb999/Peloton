@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peloton Workout Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Login Form Styles */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-form {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-form h1 {
+            color: #4F46E5;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4F46E5;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Dashboard Styles */
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #4F46E5;
+            font-size: 2rem;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: #EF4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .logout-btn:hover {
+            background: #DC2626;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4F46E5;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            color: #6B7280;
+            font-weight: 600;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+            color: #374151;
+            font-size: 1.25rem;
+        }
+
+        .chart-controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .chart-btn {
+            padding: 8px 16px;
+            background: #F3F4F6;
+            color: #374151;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .chart-btn:hover {
+            background: #E5E7EB;
+            border-color: #D1D5DB;
+        }
+
+        .chart-btn.active {
+            background: #4F46E5;
+            color: white;
+            border-color: #4F46E5;
+        }
+
+        .chart-btn.active:hover {
+            background: #4338CA;
+            border-color: #4338CA;
+        }
+
+        .recent-workouts {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .recent-workouts h3 {
+            margin-bottom: 20px;
+            color: #374151;
+        }
+
+        .workout-item {
+            padding: 15px;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .workout-item:last-child {
+            border-bottom: none;
+        }
+
+        .workout-info h4 {
+            color: #374151;
+            margin-bottom: 5px;
+        }
+
+        .workout-info p {
+            color: #6B7280;
+            font-size: 0.9rem;
+        }
+
+        .workout-stats {
+            text-align: right;
+            color: #4F46E5;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            background: #FEE2E2;
+            color: #DC2626;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid #FECACA;
+        }
+
+        .success {
+            background: #D1FAE5;
+            color: #065F46;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid #A7F3D0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container" id="loginContainer">
+        <form class="login-form" id="loginForm">
+            <h1>🚴‍♂️ Peloton Tracker</h1>
+            <div id="loginMessage"></div>
+            <div class="form-group">
+                <label for="username">Username or Email</label>
+                <input type="text" id="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="login-btn" id="loginBtn">
+                Sign In to Peloton
+            </button>
+        </form>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        <div class="container">
+            <div class="header">
+                <h1>🚴‍♂️ Your Cycling Dashboard</h1>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <div class="loading" id="loadingMessage">
+                Loading your workout data...
+            </div>
+
+            <div id="dashboardContent" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="icon">🚴‍♂️</div>
+                        <div class="value" id="totalWorkouts">-</div>
+                        <div class="label">Total Workouts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon">🛣️</div>
+                        <div class="value" id="totalDistance">-</div>
+                        <div class="label">Miles Ridden</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon">🔥</div>
+                        <div class="value" id="totalCalories">-</div>
+                        <div class="label">Calories Burned</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon">⚡</div>
+                        <div class="value" id="avgOutput">-</div>
+                        <div class="label">Avg Output (kJ)</div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Weekly Activity Trends</h3>
+                        <canvas id="weeklyChart"></canvas>
+                        <div class="chart-controls">
+                            <button class="chart-btn active" data-metric="output">Output (kJ)</button>
+                            <button class="chart-btn" data-metric="miles">Miles</button>
+                            <button class="chart-btn" data-metric="calories">Calories</button>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Performance Over Time</h3>
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="recent-workouts">
+                    <h3>Recent Workouts</h3>
+                    <div id="recentWorkoutsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PelotonTracker {
+            constructor() {
+                this.sessionData = null;
+                this.workoutData = [];
+                this.weeklyData = [];
+                this.charts = {};
+            }
+
+            async makeRequest(url, options = {}) {
+                try {
+                    // Use local backend server instead of direct Peloton API
+                    const baseUrl = window.location.origin; // Uses same origin as the webpage
+                    
+                    // Don't add /api prefix here - it should be in the URL parameter
+                    const fullUrl = `${baseUrl}${url}`;
+                    
+                    console.log('Making request to:', fullUrl);
+                    
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    };
+                    
+                    // Add session ID to headers if we have one
+                    if (this.sessionData?.session_id && !url.includes('/auth/login')) {
+                        headers['x-peloton-session'] = this.sessionData.session_id;
+                    }
+                    
+                    const response = await fetch(fullUrl, {
+                        ...options,
+                        headers
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    return await response.json();
+                } catch (error) {
+                    console.error('API Request failed:', error);
+                    throw error;
+                }
+            }
+
+            async authenticate(username, password) {
+                try {
+                    console.log('Frontend authentication called with:');
+                    console.log('Username:', username ? `"${username}" (length: ${username.length})` : 'MISSING');
+                    console.log('Password:', password ? `[PROVIDED] (length: ${password.length})` : 'MISSING');
+                    
+                    const requestBody = {
+                        username: username,
+                        password: password
+                    };
+                    
+                    console.log('Request body being sent:', {
+                        username: username || 'MISSING',
+                        password: password ? '[PROVIDED]' : 'MISSING'
+                    });
+                    
+                    const response = await this.makeRequest('/api/auth/login', {
+                        method: 'POST',
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    console.log('Auth response received:', response);
+
+                    if (response.session_id && response.user_id) {
+                        this.sessionData = response;
+                        console.log('Authentication successful! User ID:', response.user_id);
+                        return true;
+                    } else {
+                        console.error('Authentication response missing required fields:', response);
+                        throw new Error('Invalid response from server - missing session data');
+                    }
+                } catch (error) {
+                    console.error('Authentication error:', error);
+                    
+                    // Provide more specific error messages
+                    if (error.message.includes('Invalid username or password')) {
+                        throw new Error('Invalid username or password. Please check your credentials.');
+                    } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                        throw new Error('Network error. Make sure the server is running on localhost:3000');
+                    } else if (error.message.includes('ECONNREFUSED')) {
+                        throw new Error('Cannot connect to server. Make sure to run "npm start" first.');
+                    } else {
+                        throw new Error('Authentication failed: ' + error.message);
+                    }
+                }
+            }
+
+            async getCyclingWorkouts(limit = 50) {
+                try {
+                    const response = await this.makeRequest(
+                        `/api/user/${this.sessionData.user_id}/workouts?joins=ride,ride.instructor&limit=${limit}&page=0`,
+                        {
+                            headers: {
+                                'Cookie': `peloton_session_id=${this.sessionData.session_id};`,
+                                'peloton-platform': 'web'
+                            }
+                        }
+                    );
+
+                    const allWorkouts = response.data || [];
+                    const cyclingWorkouts = allWorkouts.filter(workout => 
+                        workout.fitness_discipline === 'cycling' || 
+                        (workout.ride && workout.ride.fitness_discipline === 'cycling')
+                    );
+
+                    // Sort by date (most recent first)
+                    cyclingWorkouts.sort((a, b) => new Date(b.created_at * 1000) - new Date(a.created_at * 1000));
+                    
+                    this.workoutData = cyclingWorkouts;
+                    return cyclingWorkouts;
+                } catch (error) {
+                    throw new Error('Failed to fetch workouts: ' + error.message);
+                }
+            }
+
+            async getDetailedWorkoutData(workouts, maxWorkouts = 10) {
+                const workoutsToProcess = workouts.slice(0, maxWorkouts);
+                
+                for (let i = 0; i < workoutsToProcess.length; i++) {
+                    const workout = workoutsToProcess[i];
+                    
+                    try {
+                        const response = await this.makeRequest(
+                            `/api/workout/${workout.id}/performance_graph?every_n=1000`,
+                            {
+                                headers: {
+                                    'Cookie': `peloton_session_id=${this.sessionData.session_id};`,
+                                    'peloton-platform': 'web'
+                                }
+                            }
+                        );
+
+                        // Extract metrics from summaries
+                        if (response.summaries && response.summaries.length > 0) {
+                            workout.workoutDistance = response.summaries[1]?.value || 0;
+                            workout.workoutCalories = response.summaries[2]?.value || 0;
+                        }
+
+                        if (response.average_summaries && response.average_summaries.length > 0) {
+                            workout.workoutAvgOutput = response.average_summaries[0]?.value || 0;
+                            workout.workoutAvgCadence = response.average_summaries[1]?.value || 0;
+                            workout.workoutAvgResistance = response.average_summaries[2]?.value || 0;
+                            workout.workoutAvgSpeed = response.average_summaries[3]?.value || 0;
+                        }
+
+                        // Small delay to be respectful to the API
+                        if (i < workoutsToProcess.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                        }
+                    } catch (error) {
+                        console.warn(`Failed to get detailed data for workout ${workout.id}:`, error);
+                    }
+                }
+            }
+
+            processWeeklyData() {
+                const weeklyMap = new Map();
+
+                this.workoutData.forEach(workout => {
+                    const workoutDate = new Date((workout.device_time_created_at || workout.created_at) * 1000);
+                    const monday = this.getWeekStart(workoutDate);
+                    const weekKey = monday.toISOString().split('T')[0];
+
+                    if (!weeklyMap.has(weekKey)) {
+                        weeklyMap.set(weekKey, {
+                            weekStart: monday,
+                            workouts: 0,
+                            totalCalories: 0,
+                            totalDistance: 0,
+                            totalOutput: 0
+                        });
+                    }
+
+                    const weekData = weeklyMap.get(weekKey);
+                    weekData.workouts++;
+                    weekData.totalCalories += workout.workoutCalories || workout.calories || 0;
+                    weekData.totalDistance += workout.workoutDistance || workout.distance || 0;
+                    weekData.totalOutput += (workout.total_work || 0) / 1000; // Convert to kJ
+                });
+
+                this.weeklyData = Array.from(weeklyMap.values())
+                    .sort((a, b) => a.weekStart - b.weekStart)
+                    .slice(-12); // Last 12 weeks
+            }
+
+            getWeekStart(date) {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+                return new Date(d.setDate(diff));
+            }
+
+            formatWorkoutData() {
+                return this.workoutData.map(workout => {
+                    const workoutDate = new Date((workout.device_time_created_at || workout.created_at) * 1000);
+                    const duration = workout.start_time && workout.end_time ? 
+                        Math.round((workout.end_time - workout.start_time) / 60) : 
+                        (workout.ride?.duration ? Math.round(workout.ride.duration / 60) : 0);
+
+                    return {
+                        id: workout.id,
+                        date: workoutDate,
+                        className: workout.ride?.title || 'Cycling Workout',
+                        instructor: workout.ride?.instructor?.name || 'Unknown',
+                        duration,
+                        totalOutput: (workout.total_work || 0) / 1000,
+                        calories: workout.workoutCalories || workout.calories || 0,
+                        distance: workout.workoutDistance || workout.distance || 0,
+                        avgOutput: workout.workoutAvgOutput || 0,
+                        avgCadence: workout.workoutAvgCadence || 0,
+                        avgResistance: workout.workoutAvgResistance || 0,
+                        avgSpeed: workout.workoutAvgSpeed || 0
+                    };
+                });
+            }
+
+            generateSummary() {
+                const formattedData = this.formatWorkoutData();
+                const totalWorkouts = formattedData.length;
+                
+                return {
+                    totalWorkouts,
+                    totalDistance: formattedData.reduce((sum, w) => sum + w.distance, 0),
+                    totalCalories: formattedData.reduce((sum, w) => sum + w.calories, 0),
+                    avgOutput: totalWorkouts > 0 ? 
+                        formattedData.reduce((sum, w) => sum + w.totalOutput, 0) / totalWorkouts : 0
+                };
+            }
+
+            updateDashboard() {
+                const summary = this.generateSummary();
+                
+                // Update summary stats
+                document.getElementById('totalWorkouts').textContent = summary.totalWorkouts;
+                document.getElementById('totalDistance').textContent = summary.totalDistance.toFixed(1);
+                document.getElementById('totalCalories').textContent = summary.totalCalories.toLocaleString();
+                document.getElementById('avgOutput').textContent = summary.avgOutput.toFixed(1);
+
+                // Update recent workouts
+                this.updateRecentWorkouts();
+
+                // Create charts
+                this.createWeeklyChart('output'); // Start with output by default
+                this.createPerformanceChart();
+
+                // Set up chart control buttons
+                this.setupChartControls();
+
+                // Show dashboard content
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+            }
+
+            setupChartControls() {
+                const chartButtons = document.querySelectorAll('.chart-btn');
+                
+                chartButtons.forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        // Remove active class from all buttons
+                        chartButtons.forEach(btn => btn.classList.remove('active'));
+                        
+                        // Add active class to clicked button
+                        e.target.classList.add('active');
+                        
+                        // Get the metric from data attribute
+                        const metric = e.target.dataset.metric;
+                        
+                        // Update the chart
+                        this.createWeeklyChart(metric);
+                    });
+                });
+            }
+
+            updateRecentWorkouts() {
+                const formattedData = this.formatWorkoutData();
+                const recentWorkouts = formattedData.slice(0, 10);
+                const container = document.getElementById('recentWorkoutsList');
+
+                container.innerHTML = recentWorkouts.map(workout => `
+                    <div class="workout-item">
+                        <div class="workout-info">
+                            <h4>${workout.className}</h4>
+                            <p>👨‍🏫 ${workout.instructor} | ⏱️ ${workout.duration}min | 📅 ${workout.date.toLocaleDateString()}</p>
+                        </div>
+                        <div class="workout-stats">
+                            <div>⚡ ${workout.totalOutput.toFixed(1)} kJ</div>
+                            <div>🔥 ${workout.calories} cal</div>
+                            <div>🛣️ ${workout.distance.toFixed(1)}mi</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            createWeeklyChart(metric = 'output') {
+                const ctx = document.getElementById('weeklyChart').getContext('2d');
+                
+                if (this.charts.weekly) {
+                    this.charts.weekly.destroy();
+                }
+
+                let data, label, color, backgroundColor;
+                
+                switch(metric) {
+                    case 'output':
+                        data = this.weeklyData.map(week => week.totalOutput);
+                        label = 'Total Output (kJ)';
+                        color = '#4F46E5';
+                        backgroundColor = 'rgba(79, 70, 229, 0.1)';
+                        break;
+                    case 'miles':
+                        data = this.weeklyData.map(week => week.totalDistance);
+                        label = 'Total Distance (miles)';
+                        color = '#059669';
+                        backgroundColor = 'rgba(5, 150, 105, 0.1)';
+                        break;
+                    case 'calories':
+                        data = this.weeklyData.map(week => week.totalCalories);
+                        label = 'Total Calories';
+                        color = '#DC2626';
+                        backgroundColor = 'rgba(220, 38, 38, 0.1)';
+                        break;
+                    default:
+                        data = this.weeklyData.map(week => week.totalOutput);
+                        label = 'Total Output (kJ)';
+                        color = '#4F46E5';
+                        backgroundColor = 'rgba(79, 70, 229, 0.1)';
+                }
+
+                this.charts.weekly = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: this.weeklyData.map(week => 
+                            week.weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        ),
+                        datasets: [{
+                            label: label,
+                            data: data,
+                            borderColor: color,
+                            backgroundColor: backgroundColor,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: color,
+                            pointBorderColor: color,
+                            pointHoverBackgroundColor: color,
+                            pointHoverBorderColor: '#fff',
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed.y;
+                                        if (metric === 'output') {
+                                            return `${label}: ${value.toFixed(0)} kJ`;
+                                        } else if (metric === 'miles') {
+                                            return `${label}: ${value.toFixed(1)} mi`;
+                                        } else if (metric === 'calories') {
+                                            return `${label}: ${value.toLocaleString()} cal`;
+                                        }
+                                        return `${label}: ${value}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        if (metric === 'calories') {
+                                            return value.toLocaleString();
+                                        } else if (metric === 'miles') {
+                                            return value.toFixed(1);
+                                        } else {
+                                            return Math.round(value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Store current metric for reference
+                this.currentWeeklyMetric = metric;
+            }
+
+            createPerformanceChart() {
+                const ctx = document.getElementById('performanceChart').getContext('2d');
+                const formattedData = this.formatWorkoutData();
+                const last10Workouts = formattedData.slice(0, 10).reverse();
+                
+                if (this.charts.performance) {
+                    this.charts.performance.destroy();
+                }
+
+                this.charts.performance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: last10Workouts.map(w => 
+                            w.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        ),
+                        datasets: [{
+                            label: 'Total Output (kJ)',
+                            data: last10Workouts.map(w => w.totalOutput),
+                            backgroundColor: 'rgba(139, 69, 19, 0.8)',
+                            borderColor: '#8B4513',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Global tracker instance
+        const tracker = new PelotonTracker();
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const messageDiv = document.getElementById('loginMessage');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing In...';
+            messageDiv.innerHTML = '';
+
+            try {
+                // First, test server connectivity
+                messageDiv.innerHTML = '<div class="success">🔍 Checking server connection...</div>';
+                
+                try {
+                    const testResponse = await fetch('/api/test');
+                    const testData = await testResponse.json();
+                    console.log('Server test successful:', testData);
+                    messageDiv.innerHTML = '<div class="success">✅ Server connected. Authenticating with Peloton...</div>';
+                } catch (serverError) {
+                    throw new Error('Cannot connect to backend server. Make sure to run "npm start" first and navigate to http://localhost:3000');
+                }
+
+                // Now attempt authentication
+                await tracker.authenticate(username, password);
+                messageDiv.innerHTML = '<div class="success">✅ Authentication successful!</div>';
+                
+                // Switch to dashboard
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('dashboard').classList.add('active');
+                
+                // Load workout data
+                await loadDashboardData();
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                messageDiv.innerHTML = `<div class="error">❌ ${error.message}</div>`;
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In to Peloton';
+            }
+        });
+
+        async function loadDashboardData() {
+            try {
+                console.log('Starting dashboard data load...');
+                console.log('Session data:', tracker.sessionData);
+                
+                // Get cycling workouts
+                console.log('Fetching workouts...');
+                const workouts = await tracker.getCyclingWorkouts(100);
+                console.log('Received workouts:', workouts.length);
+                
+                if (workouts.length === 0) {
+                    throw new Error('No cycling workouts found');
+                }
+
+                // Get detailed data for recent workouts
+                console.log('Fetching detailed workout data...');
+                await tracker.getDetailedWorkoutData(workouts, 20);
+                
+                // Process weekly data
+                console.log('Processing weekly data...');
+                tracker.processWeeklyData();
+                
+                // Update dashboard
+                console.log('Updating dashboard...');
+                tracker.updateDashboard();
+                
+                console.log('Dashboard load complete!');
+                
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+                document.getElementById('loadingMessage').innerHTML = 
+                    `<div class="error">❌ Error loading data: ${error.message}</div>`;
+            }
+        }
+
+        function logout() {
+            tracker.sessionData = null;
+            tracker.workoutData = [];
+            tracker.weeklyData = [];
+            
+            // Reset forms
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('loginMessage').innerHTML = '';
+            
+            // Show login, hide dashboard
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
