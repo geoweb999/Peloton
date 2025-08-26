@@ -304,7 +304,13 @@ class PelotonDataFetcher {
                 if (workout.timezone === 'Etc/GMT+8') {
                     workoutTimezone = 'America/Los_Angeles'; // PST (UTC-8)
                 } else if (workout.timezone === 'Etc/GMT+7') {
-                    workoutTimezone = 'America/Los_Angeles'; // PDT (UTC-7) - still Pacific time
+                    workoutTimezone = 'America/Los_Angeles'; // PDT (UTC-7)
+                } else if (workout.timezone === 'Etc/GMT+6') {
+                    workoutTimezone = 'America/Chicago'; // CST (UTC-6)
+                } else if (workout.timezone === 'Etc/GMT+5') {
+                    workoutTimezone = 'America/Chicago'; // CDT (UTC-5) or EST - context dependent
+                } else if (workout.timezone === 'Etc/GMT+4') {
+                    workoutTimezone = 'America/New_York'; // EDT (UTC-4)
                 } else {
                     // For other timezones, try to use them directly or fallback
                     workoutTimezone = workout.timezone;
@@ -375,13 +381,13 @@ class PelotonDataFetcher {
                 avgSpeed = `${workout.workoutAvgSpeed.toFixed(1)} mph`;
             }
             
-            // Format class title with class air date in Pacific time
+            // Format class title with class air date (classes are typically recorded in EST/EDT)
             const classWithDate = classDate ? 
                 `${className} - ${classDate.toLocaleDateString('en-US', { 
                     year: 'numeric', 
                     month: 'short', 
                     day: 'numeric',
-                    timeZone: 'America/Los_Angeles' // Always use Pacific for class dates
+                    timeZone: 'America/New_York' // Classes are typically recorded in Eastern time
                 })}` : className;
             
             return {
@@ -393,7 +399,7 @@ class PelotonDataFetcher {
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit',
-                    timeZone: 'America/Los_Angeles' // Force Pacific time for your workouts
+                    timeZone: workoutTimezone // Use the actual workout timezone
                 }),
                 className: classWithDate, // Now includes original air date
                 instructorName,
