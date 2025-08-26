@@ -595,11 +595,21 @@
             processWeeklyData() {
                 const weeklyMap = new Map();
 
-                this.workoutData.forEach(workout => {
+                this.workoutData.forEach((workout, index) => {
                     const { utcDate, timezoneName } = this.getWorkoutLocalDate(workout);
                     // Use the UTC date but group by local timezone weeks
                     const monday = this.getWeekStart(utcDate);
                     const weekKey = monday.toISOString().split('T')[0];
+
+                    // Debug logging for first few workouts
+                    if (index < 3) {
+                        console.log(`Workout ${index}:`, {
+                            workoutDate: utcDate.toISOString(),
+                            weekStart: monday.toISOString(),
+                            weekKey: weekKey,
+                            rideTitle: workout.ride?.title
+                        });
+                    }
 
                     if (!weeklyMap.has(weekKey)) {
                         weeklyMap.set(weekKey, {
@@ -621,13 +631,21 @@
                 this.weeklyData = Array.from(weeklyMap.values())
                     .sort((a, b) => a.weekStart - b.weekStart)
                     .slice(-12); // Last 12 weeks
+
+                // Debug: Log final weekly data
+                console.log('Final weekly data:', this.weeklyData.map(week => ({
+                    weekStart: week.weekStart.toISOString().split('T')[0],
+                    workouts: week.workouts,
+                    totalOutput: week.totalOutput
+                })));
             }
 
             getWeekStart(date) {
-                const d = new Date(date);
-                const day = d.getDay();
-                const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
-                return new Date(d.setDate(diff));
+                const d = new Date(date.getTime()); // Create a true copy to avoid mutation
+                const day = d.getUTCDay(); // Use UTC methods since our date represents correct local time in UTC
+                const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+                d.setUTCDate(diff);
+                return new Date(d.getTime()); // Return a new date object
             }
 
             formatWorkoutData() {
@@ -855,10 +873,43 @@
                 this.currentWeeklyMetric = metric;
             }
 
+            // Group workouts by day for performance chart
+            processDailyData() {
+                const formattedData = this.formatWorkoutData();
+                const dailyMap = new Map();
+
+                formattedData.forEach(workout => {
+                    // Create day key (YYYY-MM-DD)
+                    const dayKey = workout.date.toISOString().split('T')[0];
+                    
+                    if (!dailyMap.has(dayKey)) {
+                        dailyMap.set(dayKey, {
+                            date: new Date(workout.date.getTime()), // Keep date for display
+                            dayKey: dayKey,
+                            workouts: 0,
+                            totalOutput: 0,
+                            totalCalories: 0,
+                            totalDistance: 0
+                        });
+                    }
+
+                    const dayData = dailyMap.get(dayKey);
+                    dayData.workouts++;
+                    dayData.totalOutput += workout.totalOutput || 0;
+                    dayData.totalCalories += workout.calories || 0;
+                    dayData.totalDistance += workout.distance || 0;
+                });
+
+                // Sort by date (most recent first) and take last 10 days
+                return Array.from(dailyMap.values())
+                    .sort((a, b) => b.date - a.date)
+                    .slice(0, 10)
+                    .reverse(); // Reverse to show oldest to newest in chart
+            }
+
             createPerformanceChart() {
                 const ctx = document.getElementById('performanceChart').getContext('2d');
-                const formattedData = this.formatWorkoutData();
-                const last10Workouts = formattedData.slice(0, 10).reverse();
+                const dailyData = this.processDailyData();
                 
                 if (this.charts.performance) {
                     this.charts.performance.destroy();
@@ -867,8 +918,8 @@
                 this.charts.performance = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: last10Workouts.map(w => 
-                            w.date.toLocaleDateString('en-US', { 
+                        labels: dailyData.map(day => 
+                            day.date.toLocaleDateString('en-US', { 
                                 month: 'short', 
                                 day: 'numeric',
                                 timeZone: 'UTC'
@@ -876,7 +927,7 @@
                         ),
                         datasets: [{
                             label: 'Total Output (kJ)',
-                            data: last10Workouts.map(w => w.totalOutput),
+                            data: dailyData.map(day => day.totalOutput),
                             backgroundColor: 'rgba(139, 69, 19, 0.8)',
                             borderColor: '#8B4513',
                             borderWidth: 1
@@ -887,6 +938,30 @@
                         plugins: {
                             legend: {
                                 display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        const dayIndex = context[0].dataIndex;
+                                        const dayData = dailyData[dayIndex];
+                                        return dayData.date.toLocaleDateString('en-US', { 
+                                            weekday: 'long',
+                                            month: 'short', 
+                                            day: 'numeric',
+                                            timeZone: 'UTC'
+                                        });
+                                    },
+                                    label: function(context) {
+                                        const dayIndex = context.dataIndex;
+                                        const dayData = dailyData[dayIndex];
+                                        return [
+                                            `Total Output: ${dayData.totalOutput.toFixed(1)} kJ`,
+                                            `Workouts: ${dayData.workouts}`,
+                                            `Calories: ${dayData.totalCalories.toLocaleString()}`,
+                                            `Distance: ${dayData.totalDistance.toFixed(1)} mi`
+                                        ];
+                                    }
+                                }
                             }
                         },
                         scales: {
